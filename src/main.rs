@@ -1,17 +1,15 @@
-extern crate r2d2_mongodb;
-extern crate r2d2;
-extern crate serde;
-
 pub mod db;
 pub mod entities;
-
+pub mod handlers;
+pub mod state;
 
 use {
-  actix_web::{ get, web, App, HttpResponse, HttpServer, Responder },
-  serde::{ Deserialize },
-  std::sync::{ Arc, Mutex },
-  r2d2:: { Pool },
-  r2d2_mongodb::{ ConnectionOptions, MongodbConnectionManager }
+    actix_web::{web, App, HttpServer},
+    mongodb::{
+        options::{ClientOptions, StreamAddress},
+        Client,
+    },
+    std::sync::Arc,
 };
 
 // #[derive(Deserialize)]
@@ -43,30 +41,30 @@ use {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-  let manager = MongodbConnectionManager::new(
-    ConnectionOptions::builder()
-      .with_host("localhost", 27017)
-      .with_db("recall_db")
-      .with_auth("root", "pass")
-      .build()
-  );
+    let options = ClientOptions::builder()
+        .hosts(vec![StreamAddress {
+            hostname: "localhost".into(),
+            port: Some(27017),
+        }])
+        .max_pool_size(8)
+        .build();
 
-  if let Ok(pool) = Pool::builder().max_size(8).build(manager) {
-    HttpServer::new(move || {
-      App::new()
-        // .service(index)
-        // .service(again)
-        .app_data(pool.clone())
-    })
-    .bind("127.0.0.1:8088")?
-    .run()
-    .await?
-  } else {
-    panic!("Could not connect to the configured database")
-  }
+    // comment!
+    if let Ok(db_client) = Client::with_options(options) {
+        let state = web::Data::new(state::AppState {
+            db_client: Arc::new(db_client),
+        });
+        HttpServer::new(move || {
+            App::new()
+                .app_data(state.clone())
+                .service(handlers::list_recalls)
+        })
+        .bind("127.0.0.1:8088")?
+        .run()
+        .await?
+    } else {
+        panic!("Could not connect to the configured database")
+    }
 
-  
-
-
-  Ok(())
+    Ok(())
 }

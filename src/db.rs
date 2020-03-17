@@ -1,35 +1,45 @@
-use crate::entities::Recall;
+use {
+    bson::{bson, doc, Document},
+    mongodb::{
+        error::Error,
+        options::FindOptions,
+        Client,
+        Cursor
+    },
+    std::result::Result,
 
-use actix_web::{web, Error as AWError};
-use r2d2;
-use r2d2_mongodb;
-use serde::{Deserialize, Serialize};
-use std::{thread::sleep, time::Duration};
-
-pub type Pool = r2d2::Pool<r2d2_mongodb::MongodbConnectionManager>;
-pub type Connection = r2d2::PooledConnection<r2d2_mongodb::MongodbConnectionManager>;
-pub type Error = std::result::Result<Vec<Recall>, ()>;
+    crate::entities::Recall
+};
 
 pub enum Query {
-  GET_ALL_RECALLS,
-  GET_RANGE_RECALLS(u32, u32),
+    GetRecallsAll,
+    GetRecallsFiltered(bson::ordered::OrderedDocument),
+    GetRecallsRanged(u32, u32),
 }
 
-pub async fn execute(pool: &Pool, query: Query) -> Vec<Recall> {
-  let pool = pool.clone();
-  web::block( move || {
-    if let Ok(conn) = pool.get() {
-      match query {
-        GET_ALL_RECALLS => get_all_recalls(conn),
-        _ => {}
-      }
-    } else {
-      vec![]
+pub async fn execute(client: &Client, query: Query) -> Cursor {
+    match query {
+        Query::GetRecallsAll => get_recalls(client),
+        _ => get_recalls(client),
     }
-  });
-  vec![]
 }
 
-fn get_all_recalls(conn: Connection) -> Error {
-
+fn get_recalls(client: &Client) -> Cursor {
+  let filter = doc! { "RecallID": { "$gte": 5000 } };
+    client.database("recall_db")
+      .collection("recalls")
+      .find(
+        Some(filter), 
+        None
+      )
+      .unwrap() 
+      // .collect()
 }
+
+// fn testing(client: &Client) {
+//   let db = client.database("recall_db");
+//   let collection = db.collection("recalls");
+//   let filter = doc! { "author": "George Orwell" };
+//   let cursor = collection.find(None, None);
+
+// }
