@@ -4,8 +4,6 @@ version = "0.1.0"
 authors = ["Nick Blantz <nicholasblantz@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 actix-web = "2.0"
 actix-rt = "1.0"
@@ -15,4 +13,3 @@ futures = "0.3"
 mongodb = "0.9"
 serde = "1.0"
 serde_json = "1.0"
-# lazy_static = "1.4"

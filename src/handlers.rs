@@ -1,33 +1,47 @@
 use {
-    actix_web::{
-        get,
-        web::{self, Json},
-        App, HttpResponse, HttpServer, Responder, Result,
-    },
-    mongodb::{
-        options::{ClientOptions, StreamAddress},
-        Client,
-    },
-
     crate::{
-      db::{execute, Query},
-      entities::Remedy,
-      state::AppState,
+        db::{execute, Query},
+        entities::Recalls,
+        state::AppState,
+    },
+    actix_web::{
+        get, post,
+        web::{Data, Json, Path},
+        Either, HttpResponse,
     },
 };
 
-#[get("/")]
-pub async fn list_recalls(data: web::Data<AppState>) -> Result<Json<Remedy>> {
-    let client = &data.db_client.clone();
-
-    for recall in execute(client, Query::GetRecallsAll).await {
-        match recall {
-            Ok(recall) => println!("{:?}", recall),
-            Err(_e) => {}
-        }
+#[get("/recalls")]
+pub async fn get_recalls_all(data: Data<AppState>) -> Either<Json<Recalls>, HttpResponse> {
+    match execute(&data.db_client.clone(), Query::GetRecallsAll).await {
+        Ok(recall) => Either::A(Json(recall)),
+        Err(_e) => Either::B(HttpResponse::from("oop")),
     }
-
-    Ok(Json(Remedy {
-        name: Some(String::from("dont do it again")),
-    }))
 }
+
+#[get("/recall/{id}")]
+pub async fn get_recalls_single(
+    data: Data<AppState>,
+    id: Path<i32>,
+) -> Either<Json<Recalls>, HttpResponse> {
+    match execute(
+        &data.db_client.clone(),
+        Query::GetRecallsSingle(id.into_inner()),
+    )
+    .await
+    {
+        Ok(recall) => Either::A(Json(recall)),
+        Err(_e) => Either::B(HttpResponse::from("oop")),
+    }
+}
+
+// #[post("/recall/{id}")]
+// pub async fn post_recall(
+//     data: Data<AppState>,
+//     id: Path<i32>,
+//     payload: Json<Recalls>
+// ) -> Either<Json<Recalls>, HttpResponse> {
+  
+// }
+
+
